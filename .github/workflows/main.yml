@@ -1,0 +1,32 @@
+name: Build IF Willy CG
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Fetch code
+        uses: actions/checkout@v4
+
+      - name: Add SMAPI build environment
+        uses: Pathoschild/SMAPI-ModBuildWorkflow/add-build-environment@v1
+
+      - name: Build helper
+        run: dotnet build IFWillyCG.csproj -c Release
+
+      - name: Stage mod
+        run: |
+          mkdir -p "artifact/[SMAPI]IF Willy CG"
+          cp bin/Release/net6.0/IFWillyCG.dll "artifact/[SMAPI]IF Willy CG/"
+          cp manifest.json "artifact/[SMAPI]IF Willy CG/"
+
+      - name: Upload helper
+        uses: actions/upload-artifact@v4
+        with:
+          name: IFWillyCG-build
+          path: artifact/[SMAPI]IF Willy CG
