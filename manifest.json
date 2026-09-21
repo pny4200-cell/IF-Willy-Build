@@ -1,0 +1,9 @@
+{
+  "Name": "IF Willy CG Overlay",
+  "Author": "DEMON",
+  "Version": "1.0.0",
+  "Description": "Resolution-independent fullscreen CG overlay for IF Willy events.",
+  "UniqueID": "DEMON.IF.WillyCG",
+  "EntryDll": "IFWillyCG.dll",
+  "MinimumApiVersion": "4.0.0"
+}
