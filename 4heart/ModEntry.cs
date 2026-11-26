@@ -14,7 +14,9 @@ public sealed class ModEntry : Mod
 {
     private Texture2D? illustration;
     private bool visible;
+    private float opacity;
     private bool warnedInvalidEvent;
+    private const float FadeStep = 1f / 12f; // about 0.2 sec at 60 ticks/sec
     private const string ImagePath = "assets/IFWilly4hrtCGFull.png";
     private const string EventMarker = "쯧, 이런 건 위에부터 빼야지.";
 
@@ -32,7 +34,11 @@ public sealed class ModEntry : Mod
 
         helper.Events.GameLoop.UpdateTicked += OnUpdateTicked;
         helper.Events.Display.RenderedWorld += OnRenderedWorld;
-        helper.Events.GameLoop.ReturnedToTitle += (_, _) => SetVisible(false);
+        helper.Events.GameLoop.ReturnedToTitle += (_, _) =>
+        {
+            visible = false;
+            opacity = 0f;
+        };
     }
 
     private void OnUpdateTicked(object? sender, UpdateTickedEventArgs e)
@@ -46,41 +52,45 @@ public sealed class ModEntry : Mod
             {
                 SetVisible(false);
                 warnedInvalidEvent = false;
-                return;
             }
-
-            string[] commands = GetCommands(ev);
-            // Do not react to CG controls during any event other than our 4-heart event.
-            if (commands.Length == 0 || !commands.Any(c => c.Contains(EventMarker, StringComparison.Ordinal)))
+            else
             {
-                SetVisible(false);
-                return;
-            }
-
-            int showAt = Array.FindIndex(commands, c => c.Trim().Equals("pause 003", StringComparison.Ordinal));
-            int hideAt = Array.FindIndex(commands, c => c.Trim().Equals("pause 004", StringComparison.Ordinal));
-            int? current = GetIntMember(ev, "CurrentCommand", "currentCommand", "currentCommandIndex", "CurrentCommandIndex");
-
-            if (showAt < 0 || hideAt <= showAt || current is null)
-            {
-                if (!warnedInvalidEvent)
+                string[] commands = GetCommands(ev);
+                if (commands.Length == 0 || !commands.Any(c => c.Contains(EventMarker, StringComparison.Ordinal)))
                 {
-                    Monitor.Log($"4-heart CG commands unavailable: show={showAt}, hide={hideAt}, current={(current?.ToString() ?? "null")}", LogLevel.Warn);
-                    warnedInvalidEvent = true;
+                    SetVisible(false);
                 }
-                SetVisible(false);
-                return;
-            }
+                else
+                {
+                    int showAt = Array.FindIndex(commands, c => c.Trim().Equals("pause 003", StringComparison.Ordinal));
+                    int hideAt = Array.FindIndex(commands, c => c.Trim().Equals("pause 004", StringComparison.Ordinal));
+                    int? current = GetIntMember(ev, "CurrentCommand", "currentCommand", "currentCommandIndex", "CurrentCommandIndex");
 
-            warnedInvalidEvent = false;
-            // Range-based detection doesn't miss a three-millisecond pause between update ticks.
-            SetVisible(current.Value >= showAt && current.Value < hideAt);
+                    if (showAt < 0 || hideAt <= showAt || current is null)
+                    {
+                        if (!warnedInvalidEvent)
+                        {
+                            Monitor.Log($"4-heart CG commands unavailable: show={showAt}, hide={hideAt}, current={(current?.ToString() ?? "null")}", LogLevel.Warn);
+                            warnedInvalidEvent = true;
+                        }
+                        SetVisible(false);
+                    }
+                    else
+                    {
+                        warnedInvalidEvent = false;
+                        SetVisible(current.Value >= showAt && current.Value < hideAt);
+                    }
+                }
+            }
         }
         catch (Exception ex)
         {
             SetVisible(false);
             Monitor.Log($"4-heart CG event detection failed: {ex}", LogLevel.Error);
         }
+
+        // Keep rendering as opacity decreases even after the hide marker.
+        opacity = MathHelper.Clamp(opacity + (visible ? FadeStep : -FadeStep), 0f, 1f);
     }
 
     private void SetVisible(bool value)
@@ -93,20 +103,19 @@ public sealed class ModEntry : Mod
 
     private void OnRenderedWorld(object? sender, RenderedWorldEventArgs e)
     {
-        if (!visible || illustration is null)
+        if (opacity <= 0f || illustration is null)
             return;
 
         Rectangle screen = e.SpriteBatch.GraphicsDevice.Viewport.Bounds;
         if (screen.Width < 1 || screen.Height < 1)
             return;
 
-        // Fullscreen cover crop, with dialogue UI drawn above the world layer.
         float scale = Math.Max(screen.Width / (float)illustration.Width, screen.Height / (float)illustration.Height);
         int width = Math.Max(1, (int)MathF.Ceiling(illustration.Width * scale));
         int height = Math.Max(1, (int)MathF.Ceiling(illustration.Height * scale));
         int x = screen.X + (screen.Width - width) / 2;
         int y = screen.Y + (screen.Height - height) / 2;
-        e.SpriteBatch.Draw(illustration, new Rectangle(x, y, width, height), Color.White);
+        e.SpriteBatch.Draw(illustration, new Rectangle(x, y, width, height), Color.White * opacity);
     }
 
     private static object? GetStaticMember(string typeName, string name)
@@ -145,3 +154,4 @@ public sealed class ModEntry : Mod
         return Array.Empty<string>();
     }
 }
+
