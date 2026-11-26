@@ -17,6 +17,8 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '6.0.x'
+      - name: Add SMAPI build environment
+        uses: Pathoschild/SMAPI-ModBuildWorkflow/add-build-environment@v1
       - name: Build CG renderer
         run: dotnet build 4heart/IFWilly4Heart.csproj --configuration Release
       - name: Upload compiled DLL
