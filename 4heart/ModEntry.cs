@@ -13,12 +13,12 @@ namespace IFWilly4C;
 public sealed class ModEntry : Mod
 {
     private Texture2D? illustration;
-    private bool visible;
-    private float opacity;
-    private bool warnedInvalidEvent;
-    private const float FadeStep = 1f / 12f; // about 0.2 sec at 60 ticks/sec
-    private const string ImagePath = "assets/IFWilly4hrtCGFull.png";
-    private const string EventMarker = "쯧, 이런 건 위에부터 빼야지.";
+private bool visible;
+private float opacity;
+private bool warnedInvalidEvent;
+private const float FadeStep = 1f / 30f; // about 0.5 sec at 60 ticks/sec
+private const string ImagePath = "assets/IFWilly4hrtCGFull.png";
+private const string EventMarker = "쯧, 이런 건 위에부터 빼야지.";
 
     public override void Entry(IModHelper helper)
     {
